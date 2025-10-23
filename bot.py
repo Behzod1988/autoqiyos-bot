@@ -89,101 +89,108 @@ def start(message):
         reply_markup=main_menu()
     )
 
-# ОБРАБОТЧИК СРАВНЕНИЯ АВТО
-@bot.message_handler(func=lambda message: " vs " in message.text.lower() or " против " in message.text.lower())
-def compare_cars(message):
-    try:
-        # Определяем разделитель
-        if " vs " in message.text:
-            car1, car2 = message.text.split(" vs ", 1)
-        else:
-            car1, car2 = message.text.split(" против ", 1)
-        
-        car1 = car1.strip()
-        car2 = car2.strip()
-        
-        info1 = car_db.find_car(car1)
-        info2 = car_db.find_car(car2)
-        
-        if info1 and info2:
-            response = f"🔄 <b>Сравнение автомобилей:</b>\n\n"
-            
-            response += f"🚗 <b>{car1}</b>:\n"
-            response += f"💰 Цена: {info1['price']}$\n"
-            response += f"⚙️ Двигатель: {info1['engine']}\n"
-            response += f"⛽ Расход: {info1['fuel']} л/100km\n"
-            response += f"📊 КПП: {info1['transmission']}\n"
-            response += f"🎯 Тип: {info1['type']}\n\n"
-            
-            response += f"🚙 <b>{car2}</b>:\n" 
-            response += f"💰 Цена: {info2['price']}$\n"
-            response += f"⚙️ Двигатель: {info2['engine']}\n"
-            response += f"⛽ Расход: {info2['fuel']} л/100km\n"
-            response += f"📊 КПП: {info2['transmission']}\n"
-            response += f"🎯 Тип: {info2['type']}\n\n"
-            
-            response += f"📅 <i>Данные актуальны на: {car_db.data.get('last_updated', 'N/A')}</i>"
-            
-        elif info1:
-            response = f"❌ Автомобиль '{car2}' не найден в базе\n\n"
-            response += f"🚗 <b>{car1}</b>:\n"
-            response += f"💰 Цена: {info1['price']}$\n"
-            response += f"⚙️ Двигатель: {info1['engine']}\n"
-            response += f"⛽ Расход: {info1['fuel']} л/100km"
-            
-        elif info2:
-            response = f"❌ Автомобиль '{car1}' не найден в базе\n\n"
-            response += f"🚙 <b>{car2}</b>:\n"
-            response += f"💰 Цена: {info2['price']}$\n"
-            response += f"⚙️ Двигатель: {info2['engine']}\n"
-            response += f"⛽ Расход: {info2['fuel']} л/100km"
-            
-        else:
-            response = "❌ Оба автомобиля не найдены в базе данных"
-            
-        bot.send_message(message.chat.id, response, parse_mode='HTML')
-        
-    except Exception as e:
-        print(f"Ошибка сравнения: {e}")
-        bot.send_message(message.chat.id, "❌ Ошибка при сравнении. Используйте формат: 'Onix vs Tracker'")
+@bot.message_handler(func=lambda message: message.text == "🚗 Сравнить авто")
+def start_comparison(message):
+    bot.send_message(
+        message.chat.id,
+        "🔧 Введите два автомобиля для сравнения:\n\n<b>Формат:</b>\nOnix vs Tracker\nИли\nOnix против Tracker",
+        parse_mode='HTML',
+        reply_markup=back_button()
+    )
 
+@bot.message_handler(func=lambda message: message.text == "🔎 Поиск по сайту")
+def start_search(message):
+    bot.send_message(
+        message.chat.id,
+        "🕵️ Введите марку или модель, чтобы найти объявления.",
+        reply_markup=back_button()
+    )
+
+@bot.message_handler(func=lambda message: message.text == "ℹ️ О проекте")
+def about_project(message):
+    bot.send_message(
+        message.chat.id,
+        "ℹ️ <b>AutoQiyos</b> — бот для сравнения авто с реальной базой данных!\n\nТеперь с реальными ценами и характеристиками!",
+        parse_mode='HTML',
+        reply_markup=back_button()
+    )
+
+@bot.message_handler(func=lambda message: message.text == "💬 Связаться")
+def contact_admin(message):
+    markup = types.InlineKeyboardMarkup()
+    markup.add(types.InlineKeyboardButton("📞 Написать админу", url="https://t.me/behzod_islomoff"))
+    bot.send_message(message.chat.id, "Связь с админом:", reply_markup=markup)
+
+@bot.message_handler(func=lambda message: message.text == "⬅️ Назад в меню")
+def back_to_menu(message):
+    bot.send_message(message.chat.id, "🏠 Главное меню:", reply_markup=main_menu())
+
+# ОБРАБОТЧИК СРАВНЕНИЯ АВТО - ДОЛЖЕН БЫТЬ ПОСЛЕДНИМ
 @bot.message_handler(func=lambda message: True)
-def handle_buttons(message):
+def handle_all_messages(message):
     text = message.text
     
-    if text == "🚗 Сравнить авто":
-        bot.send_message(
-            message.chat.id,
-            "🔧 Введите два автомобиля для сравнения:\n\n<b>Формат:</b>\nOnix vs Tracker\nИли\nOnix против Tracker",
-            parse_mode='HTML',
-            reply_markup=back_button()
-        )
-    
-    elif text == "🔎 Поиск по сайту":
-        bot.send_message(
-            message.chat.id,
-            "🕵️ Введите марку или модель, чтобы найти объявления.",
-            reply_markup=back_button()
-        )
-    
-    elif text == "ℹ️ О проекте":
-        bot.send_message(
-            message.chat.id,
-            "ℹ️ <b>AutoQiyos</b> — бот для сравнения авто с реальной базой данных!\n\nТеперь с реальными ценами и характеристиками!",
-            parse_mode='HTML',
-            reply_markup=back_button()
-        )
-    
-    elif text == "💬 Связаться":
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("📞 Написать админу", url="https://t.me/behzod_islomoff"))
-        bot.send_message(message.chat.id, "Связь с админом:", reply_markup=markup)
-    
-    elif text == "⬅️ Назад в меню":
-        bot.send_message(message.chat.id, "🏠 Главное меню:", reply_markup=main_menu())
+    # Проверяем на сравнение (должно быть после всех конкретных обработчиков)
+    if " vs " in text.lower() or " против " in text.lower():
+        try:
+            # Определяем разделитель
+            if " vs " in text:
+                car1, car2 = text.split(" vs ", 1)
+            else:
+                car1, car2 = text.split(" против ", 1)
+            
+            car1 = car1.strip()
+            car2 = car2.strip()
+            
+            print(f"🔍 Сравниваем: '{car1}' vs '{car2}'")
+            
+            info1 = car_db.find_car(car1)
+            info2 = car_db.find_car(car2)
+            
+            if info1 and info2:
+                response = f"🔄 <b>Сравнение автомобилей:</b>\n\n"
+                
+                response += f"🚗 <b>{car1}</b>:\n"
+                response += f"💰 Цена: {info1['price']}$\n"
+                response += f"⚙️ Двигатель: {info1['engine']}\n"
+                response += f"⛽ Расход: {info1['fuel']} л/100km\n"
+                response += f"📊 КПП: {info1['transmission']}\n"
+                response += f"🎯 Тип: {info1['type']}\n\n"
+                
+                response += f"🚙 <b>{car2}</b>:\n" 
+                response += f"💰 Цена: {info2['price']}$\n"
+                response += f"⚙️ Двигатель: {info2['engine']}\n"
+                response += f"⛽ Расход: {info2['fuel']} л/100km\n"
+                response += f"📊 КПП: {info2['transmission']}\n"
+                response += f"🎯 Тип: {info2['type']}\n\n"
+                
+                response += f"📅 <i>Данные актуальны на: {car_db.data.get('last_updated', 'N/A')}</i>"
+                
+            elif info1:
+                response = f"❌ Автомобиль '{car2}' не найден в базе\n\n"
+                response += f"🚗 <b>{car1}</b>:\n"
+                response += f"💰 Цена: {info1['price']}$\n"
+                response += f"⚙️ Двигатель: {info1['engine']}\n"
+                response += f"⛽ Расход: {info1['fuel']} л/100km"
+                
+            elif info2:
+                response = f"❌ Автомобиль '{car1}' не найден в базе\n\n"
+                response += f"🚙 <b>{car2}</b>:\n"
+                response += f"💰 Цена: {info2['price']}$\n"
+                response += f"⚙️ Двигатель: {info2['engine']}\n"
+                response += f"⛽ Расход: {info2['fuel']} л/100km"
+                
+            else:
+                response = "❌ Оба автомобиля не найдены в базе данных"
+                
+            bot.send_message(message.chat.id, response, parse_mode='HTML')
+            
+        except Exception as e:
+            print(f"Ошибка сравнения: {e}")
+            bot.send_message(message.chat.id, "❌ Ошибка при сравнении. Используйте формат: 'Onix vs Tracker'")
     
     else:
-        # Если просто название авто - показываем информацию
+        # Если не сравнение, ищем информацию об одном авто
         car_info = car_db.find_car(text)
         if car_info:
             response = f"🚗 <b>{text}</b>\n\n"
