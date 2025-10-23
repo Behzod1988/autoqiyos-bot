@@ -1,0 +1,43 @@
+{
+  "version": "1.0",
+  "last_updated": "2024-01-15",
+  "source": "Official specs + Uzbekistan market data",
+  "cars": {
+    "Chevrolet Onix": {
+      "price": "14500-16500",
+      "engine": "1.2L MPFI 84 hp",
+      "fuel": "6.5",
+      "transmission": "Manual 5 / Automatic 6",
+      "type": "sedan",
+      "years": "2020-2024",
+      "features": ["ABS", "Airbags", "AC", "Power Steering"]
+    },
+    "Chevrolet Tracker": {
+      "price": "17500-21000",
+      "engine": "1.0L Turbo 115 hp",
+      "fuel": "7.2",
+      "transmission": "Automatic 6",
+      "type": "suv",
+      "years": "2020-2024",
+      "features": ["Climate Control", "Rear Camera", "Cruise Control", "Touchscreen"]
+    },
+    "Chevrolet Nexia 3": {
+      "price": "10500-12500",
+      "engine": "1.5L 107 hp",
+      "fuel": "7.8",
+      "transmission": "Manual 5 / Automatic 6",
+      "type": "sedan",
+      "years": "2016-2023",
+      "features": ["AC", "Power Steering", "Central Locking"]
+    },
+    "Chevrolet Cobalt": {
+      "price": "13500-15500",
+      "engine": "1.5L 106 hp",
+      "fuel": "7.5",
+      "transmission": "Manual 5 / Automatic 6",
+      "type": "sedan",
+      "years": "2016-2024",
+      "features": ["ABS", "Airbags", "AC", "Power Windows"]
+    }
+  }
+}
