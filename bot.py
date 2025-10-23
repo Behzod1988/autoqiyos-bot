@@ -23,7 +23,7 @@ except:
 class CarDatabase:
     def __init__(self):
         # ЗАМЕНИТЕ 'ВАШ_USERNAME' НА ВАШ РЕАЛЬНЫЙ USERNAME GITHUB!
-        self.db_url = "https://raw.githubusercontent.com/ВАШ_USERNAME/autoqiyos-bot/main/car_database.json"
+        self.db_url = "https://raw.githubusercontent.com/Behzod1988/autoqiyos-bot/main/car_database.json"
         self.data = None
     
     def load_database(self):
