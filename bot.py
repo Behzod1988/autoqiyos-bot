@@ -14,7 +14,19 @@ if not TOKEN:
     print("❌ ОШИБКА: BOT_TOKEN не найден!")
     exit(1)
 
-# Flask app - ИСПРАВЛЕННЫЙ КОД
+# Создаем бота
+bot = telebot.TeleBot(TOKEN)
+
+# 🔥 ВАЖНО: УДАЛЯЕМ WEBHOOK ПЕРЕД ЗАПУСКОМ
+print("🗑️ Удаляем старый webhook...")
+try:
+    bot.delete_webhook()
+    print("✅ Webhook удален!")
+    time.sleep(1)
+except Exception as e:
+    print(f"⚠️ Ошибка при удалении webhook: {e}")
+
+# Flask app
 app = Flask(__name__)
 
 @app.route('/')
@@ -27,30 +39,28 @@ def health():
 
 def run_flask():
     print("🌐 Запускаем Flask на 0.0.0.0:8080...")
-    app.run(host='0.0.0.0', port=8080, debug=False)  # ИСПРАВЛЕНО!
+    app.run(host='0.0.0.0', port=8080, debug=False)
 
 # Запускаем Flask в фоне
 Thread(target=run_flask, daemon=True).start()
-
-# Бот
-bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['start'])
 def start(message):
     print(f"📩 Получен /start от {message.from_user.id}")
     bot.send_message(
         message.chat.id,
-        "🚗 <b>AutoQiyos Bot</b> работает!\n\n"
+        "🚗 <b>AutoQiyos Bot</b> работает на Railway 24/7! ✅\n\n"
         "Доступные команды:\n"
-        "• /start - меню\n"
-        "• /test - проверка\n\n"
+        "• /start - меню\n" 
+        "• /test - проверка\n"
+        "• /status - статус бота\n\n"
         "Выберите действие:",
         parse_mode='HTML'
     )
 
-@bot.message_handler(commands=['test'])
+@bot.message_handler(commands=['test', 'status'])
 def test(message):
-    bot.send_message(message.chat.id, "✅ Тест пройден! Бот активен.")
+    bot.send_message(message.chat.id, "✅ Тест пройден! Бот активен и работает.")
 
 @bot.message_handler(func=lambda message: True)
 def all_messages(message):
