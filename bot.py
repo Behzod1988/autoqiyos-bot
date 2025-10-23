@@ -1,5 +1,6 @@
 import os
 import time
+import requests
 from threading import Thread
 from flask import Flask
 import telebot
@@ -13,14 +14,23 @@ if not TOKEN:
     print("❌ ОШИБКА: BOT_TOKEN не найден!")
     exit(1)
 
-# Создаем бота
-bot = telebot.TeleBot(TOKEN)
-
-# 🔥 УДАЛЯЕМ СТАРЫЙ WEBHOOK
+# 🔥 УСИЛЕННОЕ УДАЛЕНИЕ WEBHOOK
+print("🗑️ Удаляем ВСЕ старые webhooks...")
 try:
+    # Способ 1: Через библиотеку
+    bot = telebot.TeleBot(TOKEN)
     bot.delete_webhook()
-    print("✅ Старый webhook удален!")
-    time.sleep(1)
+    print("✅ Webhook удален через библиотеку")
+    
+    # Способ 2: Через прямой API запрос
+    response = requests.get(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook")
+    print(f"✅ Webhook удален через API: {response.status_code}")
+    
+    # Способ 3: С параметром drop_pending_updates
+    response = requests.get(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook?drop_pending_updates=true")
+    print(f"✅ Webhook удален с очисткой: {response.status_code}")
+    
+    time.sleep(3)  # Даем время Telegram обработать
 except Exception as e:
     print(f"⚠️ Ошибка при удалении webhook: {e}")
 
@@ -36,7 +46,7 @@ def run_flask():
 
 Thread(target=run_flask, daemon=True).start()
 
-# 🎯 КЛАВИАТУРЫ КАК ВЧЕРА
+# 🎯 КЛАВИАТУРЫ
 def main_menu():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(types.KeyboardButton("🚗 Сравнить авто"))
@@ -50,7 +60,7 @@ def back_button():
     markup.add(types.KeyboardButton("⬅️ Назад в меню"))
     return markup
 
-# 🎯 ОБРАБОТЧИКИ КАК ВЧЕРА
+# 🎯 ОБРАБОТЧИКИ
 @bot.message_handler(commands=['start'])
 def start(message):
     bot.send_message(
@@ -82,12 +92,7 @@ def handle_buttons(message):
     elif text == "ℹ️ О проекте":
         bot.send_message(
             message.chat.id,
-            "ℹ️ <b>AutoQiyos</b> — бот для сравнения авто из сайтов Узбекистана.\n\n"
-            "⚡ <b>Возможности:</b>\n"
-            "• Сравнение характеристик авто\n"
-            "• Поиск объявлений\n"
-            "• Анализ цен\n"
-            "• Работает 24/7",
+            "ℹ️ <b>AutoQiyos</b> — бот для сравнения авто из сайтов Узбекистана.",
             parse_mode='HTML',
             reply_markup=back_button()
         )
@@ -112,42 +117,17 @@ def handle_buttons(message):
         )
     
     else:
-        # Обработка сравнения авто
-        if " vs " in text.lower() or " против " in text.lower():
-            try:
-                if " vs " in text:
-                    car1, car2 = text.split(" vs ", 1)
-                else:
-                    car1, car2 = text.split(" против ", 1)
-                
-                response = (
-                    f"🔄 <b>Сравниваю автомобили:</b>\n\n"
-                    f"🚗 <b>{car1.strip()}</b>\n"
-                    f"⚔️ VS\n" 
-                    f"🚙 <b>{car2.strip()}</b>\n\n"
-                    f"📊 <i>Функция сравнения в разработке...</i>\n"
-                    f"Скоро будут доступны:\n"
-                    f"• Цены\n• Характеристики\n• Отзывы\n• Рейтинги"
-                )
-                bot.send_message(message.chat.id, response, parse_mode='HTML')
-                
-            except:
-                bot.send_message(
-                    message.chat.id,
-                    "❌ Используйте формат: <b>Onix vs Tracker</b>",
-                    parse_mode='HTML'
-                )
-        else:
-            bot.send_message(
-                message.chat.id,
-                "❓ Команда не найдена. Выбери из меню ниже 👇", 
-                reply_markup=main_menu()
-            )
+        bot.send_message(
+            message.chat.id,
+            "❓ Команда не найдена. Выбери из меню ниже 👇", 
+            reply_markup=main_menu()
+        )
 
-print("✅ Бот настроен. Запускаем...")
+print("✅ Бот настроен. Запускаем polling...")
 while True:
     try:
         bot.polling(none_stop=True, timeout=60)
+        print("🔄 Перезапускаем polling...")
     except Exception as e:
-        print(f"❌ Ошибка: {e}")
+        print(f"❌ Ошибка polling: {e}")
         time.sleep(5)
