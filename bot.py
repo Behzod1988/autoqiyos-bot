@@ -2,25 +2,24 @@ import os
 import requests
 import telebot
 from telebot import types
-from flask import Flask
-from threading import Thread
 import time
 
-print("🚀 AutoQiyos Bot запускается...")
+print("🚀 AutoQiyos Bot - УПРОЩЕННАЯ ВЕРСИЯ")
 
+# Проверяем токен
 TOKEN = os.environ.get('BOT_TOKEN')
-bot = telebot.TeleBot(TOKEN, parse_mode='HTML')
+if not TOKEN:
+    print("❌ ОШИБКА: Нет токена!")
+    exit(1)
 
-# ✅ ФИКСИМ ОШИБКУ 409
-bot.skip_pending = True  # Пропускаем ожидающие сообщения
+print("✅ Токен найден")
 
-# Удаляем webhook и даем время для остановки старого бота
-try:
-    bot.delete_webhook(drop_pending_updates=True)
-    print("✅ Webhook удален")
-    time.sleep(3)  # Даем время остановиться старому боту
-except Exception as e:
-    print(f"⚠️ Ошибка webhook: {e}")
+# Создаем бота с отключенным многопоточным поллингом
+bot = telebot.TeleBot(TOKEN, parse_mode='HTML', threaded=False)
+
+# Ждем 10 секунд чтобы старый бот точно остановился
+print("⏳ Ждем остановки старого бота...")
+time.sleep(10)
 
 # БАЗА ДАННЫХ
 class CarDatabase:
@@ -33,7 +32,7 @@ class CarDatabase:
         try:
             response = requests.get(self.db_url, timeout=10)
             self.data = response.json()
-            print(f"✅ База загружена: {len(self.data['cars'])} авто")
+            print(f"✅ База: {len(self.data['cars'])} авто")
         except Exception as e:
             print(f"❌ Ошибка базы: {e}")
             self.data = {"cars": {}}
@@ -50,32 +49,12 @@ class CarDatabase:
 
 car_db = CarDatabase()
 
-# Flask app
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "🤖 AutoQiyos Bot работает!"
-
-@app.route('/health')
-def health():
-    return {"status": "healthy", "cars": len(car_db.data["cars"])}
-
-def run_flask():
-    app.run(host='0.0.0.0', port=8080, debug=False)
-
-Thread(target=run_flask, daemon=True).start()
-
-# КЛАВИАТУРЫ
+# ПРОСТЫЕ КНОПКИ
 def main_menu():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add("🚗 Сравнить авто", "🔍 Найти авто")
+    markup.add("🚗 Сравнить авто")
+    markup.add("🔍 Найти авто")
     markup.add("ℹ️ О проекте")
-    return markup
-
-def back_button():
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add("⬅️ Назад")
     return markup
 
 # КОМАНДЫ
@@ -89,56 +68,40 @@ def start(message):
 
 @bot.message_handler(commands=['test'])
 def test(message):
-    bot.send_message(message.chat.id, "✅ Бот работает! Ошибок нет.")
+    bot.send_message(message.chat.id, "✅ Бот работает! Тест пройден.")
 
-@bot.message_handler(commands=['restart'])
-def restart(message):
-    bot.send_message(message.chat.id, "🔄 Перезапускаю бота...")
-    # Перезапускаем бота
-    bot.stop_polling()
-    time.sleep(2)
-    start_polling()
+@bot.message_handler(commands=['debug'])
+def debug(message):
+    bot.send_message(message.chat.id, f"🔧 Статус: Работает\n🚗 Авто в базе: {len(car_db.data['cars'])}")
 
 @bot.message_handler(func=lambda message: message.text == "🚗 Сравнить авто")
 def compare_cars(message):
     bot.send_message(
         message.chat.id,
-        "🔧 Введите два автомобиля для сравнения:\n\n<b>Формат:</b>\n<code>Onix vs Tracker</code>",
-        parse_mode='HTML',
-        reply_markup=back_button()
+        "🔧 Напиши два автомобиля:\n\n<code>Onix vs Tracker</code>\n<code>Cobalt против Nexia</code>",
+        parse_mode='HTML'
     )
 
 @bot.message_handler(func=lambda message: message.text == "🔍 Найти авто")
 def find_car(message):
     bot.send_message(
         message.chat.id,
-        "🔍 Введите название автомобиля для поиска в базе:",
-        reply_markup=back_button()
+        "🔍 Напиши название автомобиля:\n\n<code>Cobalt</code>\n<code>Nexia</code>\n<code>Onix</code>",
+        parse_mode='HTML'
     )
 
 @bot.message_handler(func=lambda message: message.text == "ℹ️ О проекте")
 def about(message):
     bot.send_message(
         message.chat.id,
-        "ℹ️ <b>AutoQiyos</b>\n\nБот для сравнения автомобилей\n\n"
-        "🚗 Сравнивайте характеристики\n"
-        "🔍 Ищите в базе данных\n"
-        "💰 Актуальные цены",
-        parse_mode='HTML',
-        reply_markup=back_button()
+        "ℹ️ <b>AutoQiyos</b>\n\nПростой бот для сравнения автомобилей\n\nКоманды:\n/start - меню\n/test - проверка\n/debug - статус",
+        parse_mode='HTML'
     )
 
-@bot.message_handler(func=lambda message: message.text == "⬅️ Назад")
-def back(message):
-    bot.send_message(message.chat.id, "Главное меню:", reply_markup=main_menu())
-
-# ОБРАБОТКА СООБЩЕНИЙ
+# ОБРАБОТКА ВСЕХ СООБЩЕНИЙ
 @bot.message_handler(func=lambda message: True)
 def handle_all_messages(message):
     text = message.text.strip()
-    
-    if text == "⬅️ Назад":
-        return
     
     # Обработка сравнения
     if " vs " in text.lower() or " против " in text.lower():
@@ -154,59 +117,50 @@ def handle_all_messages(message):
             info1 = car_db.find_car(car1)
             info2 = car_db.find_car(car2)
             
-            response = "🔄 <b>Сравнение автомобилей:</b>\n\n"
+            response = "🔄 <b>Сравнение:</b>\n\n"
             
             if info1:
                 response += f"🚗 <b>{car1}</b>:\n"
-                response += f"💰 Цена: {info1['price']}\n"
-                response += f"⚙️ Двигатель: {info1['engine']}\n"
-                response += f"⛽ Расход: {info1['fuel']}\n\n"
+                response += f"💰 {info1['price']}\n"
+                response += f"⚙️ {info1['engine']}\n\n"
             else:
                 response += f"❌ {car1} не найден\n\n"
             
             if info2:
                 response += f"🚙 <b>{car2}</b>:\n"
-                response += f"💰 Цена: {info2['price']}\n"
-                response += f"⚙️ Двигатель: {info2['engine']}\n"
-                response += f"⛽ Расход: {info2['fuel']}\n\n"
+                response += f"💰 {info2['price']}\n"
+                response += f"⚙️ {info2['engine']}\n\n"
             else:
                 response += f"❌ {car2} не найден\n\n"
             
             bot.send_message(message.chat.id, response, parse_mode='HTML')
             
         except Exception as e:
-            print(f"Ошибка сравнения: {e}")
-            bot.send_message(message.chat.id, "❌ Ошибка. Используйте: Onix vs Tracker")
+            bot.send_message(message.chat.id, "❌ Ошибка. Используй: Onix vs Tracker")
     
     # Поиск одного автомобиля
     else:
         info = car_db.find_car(text)
         if info:
             response = f"🚗 <b>{text}</b>\n\n"
-            response += f"💰 Цена: {info['price']}\n"
-            response += f"⚙️ Двигатель: {info['engine']}\n"
-            response += f"⛽ Расход: {info['fuel']}\n"
-            response += f"📊 КПП: {info['transmission']}\n"
-            response += f"🎯 Тип: {info['type']}"
+            response += f"💰 {info['price']}\n"
+            response += f"⚙️ {info['engine']}\n"
+            response += f"⛽ {info['fuel']}\n"
+            response += f"📊 {info['transmission']}"
             
             bot.send_message(message.chat.id, response, parse_mode='HTML')
         else:
             bot.send_message(
                 message.chat.id,
-                f"❌ '{text}' не найден в базе данных\n\nПопробуйте другое название.",
+                f"❌ '{text}' не найден\n\nПопробуй другое название.",
                 reply_markup=main_menu()
             )
 
-# ФУНКЦИЯ ЗАПУСКА ПОЛЛИНГА
-def start_polling():
-    print("🔄 Запускаем поллинг...")
-    try:
-        bot.infinity_polling(timeout=60, long_polling_timeout=30)
-    except Exception as e:
-        print(f"❌ Ошибка поллинга: {e}")
-        print("🔄 Перезапускаем через 5 секунд...")
-        time.sleep(5)
-        start_polling()
-
-print("✅ Бот готов к работе!")
-start_polling()
+print("🎯 Запускаем упрощенного бота...")
+try:
+    # Используем простой polling без многопоточности
+    bot.polling(none_stop=True, interval=2, timeout=30)
+except Exception as e:
+    print(f"❌ Ошибка: {e}")
+    print("🔄 Перезапуск через 10 секунд...")
+    time.sleep(10)
