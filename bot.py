@@ -104,7 +104,7 @@ def debug(message):
 
 @bot.message_handler(commands=['parse'])
 def parse_command(message):
-    """Парсинг цен"""
+    """Парсинг реальных цен"""
     try:
         parts = message.text.split(' ', 1)
         if len(parts) < 2:
@@ -112,22 +112,34 @@ def parse_command(message):
             return
         
         car_name = parts[1].strip()
-        msg = bot.send_message(message.chat.id, f"🔍 Парсим {car_name}...")
+        msg = bot.send_message(message.chat.id, f"🔍 Ищу реальные объявления на {car_name}...")
         
         result = parser.get_prices(car_name)
         
         if result.get('status') == 'success':
             response = f"🚗 <b>{car_name.upper()}</b>\n\n"
-            response += "💰 <b>Примеры цен:</b>\n"
-            for price in result['prices']:
-                response += f"• {price}\n"
-            response += "\n🔗 Данные с Avtoelon.uz"
+            response += f"📊 Найдено: {result['total_found']} объявлений\n\n"
+            response += "💰 <b>Реальные объявления:</b>\n\n"
+            
+            for i, ad in enumerate(result['prices'][:5], 1):
+                response += f"{i}. <b>{ad.get('title', 'Без названия')}</b>\n"
+                response += f"   💰 {ad.get('price', 'Цена не указана')}\n"
+                if ad.get('year'):
+                    response += f"   🗓 {ad['year']}\n"
+                response += f"   🌐 {ad.get('source', 'Avtoelon.uz')}\n\n"
+            
         else:
-            response = f"❌ Ошибка: {result.get('error')}"
+            response = f"❌ Не найдено объявлений для {car_name}"
         
-        bot.edit_message_text(response, message.chat.id, msg.message_id, parse_mode='HTML')
+        bot.edit_message_text(
+            response, 
+            message.chat.id, 
+            msg.message_id, 
+            parse_mode='HTML'
+        )
         
     except Exception as e:
+        logger.error(f"Ошибка: {e}")
         bot.send_message(message.chat.id, f"❌ Ошибка: {e}")
 
 @bot.message_handler(func=lambda message: message.text == "🚗 Сравнить авто")
