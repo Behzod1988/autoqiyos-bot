@@ -4,11 +4,23 @@ import telebot
 from telebot import types
 from flask import Flask
 from threading import Thread
+import time
 
 print("🚀 AutoQiyos Bot запускается...")
 
 TOKEN = os.environ.get('BOT_TOKEN')
 bot = telebot.TeleBot(TOKEN, parse_mode='HTML')
+
+# ✅ ФИКСИМ ОШИБКУ 409
+bot.skip_pending = True  # Пропускаем ожидающие сообщения
+
+# Удаляем webhook и даем время для остановки старого бота
+try:
+    bot.delete_webhook(drop_pending_updates=True)
+    print("✅ Webhook удален")
+    time.sleep(3)  # Даем время остановиться старому боту
+except Exception as e:
+    print(f"⚠️ Ошибка webhook: {e}")
 
 # БАЗА ДАННЫХ
 class CarDatabase:
@@ -45,6 +57,10 @@ app = Flask(__name__)
 def home():
     return "🤖 AutoQiyos Bot работает!"
 
+@app.route('/health')
+def health():
+    return {"status": "healthy", "cars": len(car_db.data["cars"])}
+
 def run_flask():
     app.run(host='0.0.0.0', port=8080, debug=False)
 
@@ -54,7 +70,7 @@ Thread(target=run_flask, daemon=True).start()
 def main_menu():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("🚗 Сравнить авто", "🔍 Найти авто")
-    markup.add("🌐 Парсить цены", "ℹ️ О проекте")
+    markup.add("ℹ️ О проекте")
     return markup
 
 def back_button():
@@ -73,7 +89,15 @@ def start(message):
 
 @bot.message_handler(commands=['test'])
 def test(message):
-    bot.send_message(message.chat.id, "✅ Бот работает!")
+    bot.send_message(message.chat.id, "✅ Бот работает! Ошибок нет.")
+
+@bot.message_handler(commands=['restart'])
+def restart(message):
+    bot.send_message(message.chat.id, "🔄 Перезапускаю бота...")
+    # Перезапускаем бота
+    bot.stop_polling()
+    time.sleep(2)
+    start_polling()
 
 @bot.message_handler(func=lambda message: message.text == "🚗 Сравнить авто")
 def compare_cars(message):
@@ -89,15 +113,6 @@ def find_car(message):
     bot.send_message(
         message.chat.id,
         "🔍 Введите название автомобиля для поиска в базе:",
-        reply_mup=back_button()
-    )
-
-@bot.message_handler(func=lambda message: message.text == "🌐 Парсить цены")
-def parse_prices(message):
-    bot.send_message(
-        message.chat.id,
-        "🌐 <b>Парсинг цен с Avtoelon</b>\n\nВведите название автомобиля:\n<code>Cobalt</code>\n<code>Nexia</code>\n<code>Spark</code>",
-        parse_mode='HTML',
         reply_markup=back_button()
     )
 
@@ -105,7 +120,10 @@ def parse_prices(message):
 def about(message):
     bot.send_message(
         message.chat.id,
-        "ℹ️ <b>AutoQiyos</b>\n\nБот для сравнения автомобилей и парсинга цен с Avtoelon.uz",
+        "ℹ️ <b>AutoQiyos</b>\n\nБот для сравнения автомобилей\n\n"
+        "🚗 Сравнивайте характеристики\n"
+        "🔍 Ищите в базе данных\n"
+        "💰 Актуальные цены",
         parse_mode='HTML',
         reply_markup=back_button()
     )
@@ -157,6 +175,7 @@ def handle_all_messages(message):
             bot.send_message(message.chat.id, response, parse_mode='HTML')
             
         except Exception as e:
+            print(f"Ошибка сравнения: {e}")
             bot.send_message(message.chat.id, "❌ Ошибка. Используйте: Onix vs Tracker")
     
     # Поиск одного автомобиля
@@ -174,9 +193,20 @@ def handle_all_messages(message):
         else:
             bot.send_message(
                 message.chat.id,
-                f"❌ '{text}' не найден в базе данных\n\nПопробуйте другое название или сравнение двух авто.",
+                f"❌ '{text}' не найден в базе данных\n\nПопробуйте другое название.",
                 reply_markup=main_menu()
             )
 
-print("✅ Бот запущен!")
-bot.infinity_polling()
+# ФУНКЦИЯ ЗАПУСКА ПОЛЛИНГА
+def start_polling():
+    print("🔄 Запускаем поллинг...")
+    try:
+        bot.infinity_polling(timeout=60, long_polling_timeout=30)
+    except Exception as e:
+        print(f"❌ Ошибка поллинга: {e}")
+        print("🔄 Перезапускаем через 5 секунд...")
+        time.sleep(5)
+        start_polling()
+
+print("✅ Бот готов к работе!")
+start_polling()
